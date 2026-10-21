@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Touch — browser 3D</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { height:100%; overflow:hidden; background:#0e1014; }
+  canvas { display:block; }
+  body { font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; color:#dfe6ef; }
+  .panel {
+    position:fixed; background:rgba(14,16,20,.72); backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.09); border-radius:10px; padding:10px 12px;
+    pointer-events:none;
+  }
+  #keys { top:14px; left:14px; max-width:230px; }
+  #keys h1 { font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#7fb8e8; margin-bottom:8px; }
+  #keys div { display:flex; gap:8px; margin:3px 0; color:#9aa7b6; }
+  #keys b { color:#e8eef6; font-weight:500; min-width:52px; display:inline-block; }
+  #meters { bottom:14px; left:14px; width:220px; }
+  .row { display:flex; justify-content:space-between; margin-bottom:4px; color:#8fa0b2; }
+  .row span:last-child { color:#e8eef6; }
+  .bar { height:5px; background:rgba(255,255,255,.09); border-radius:3px; overflow:hidden; margin-bottom:9px; }
+  .bar i { display:block; height:100%; width:0%; border-radius:3px; transition:width .12s; }
+  #arousalBar i { background:linear-gradient(90deg,#e0618a,#ff9ec4); }
+  #depthBar i   { background:linear-gradient(90deg,#4a90d9,#7fd4ff); }
+  #zone { color:#ffd9a0; }
+  #ui { position:fixed; top:14px; right:14px; display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
+  #ui button {
+    font:inherit; cursor:pointer; color:#cfd8e3; background:rgba(14,16,20,.72);
+    border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:7px 11px;
+    backdrop-filter:blur(10px); min-width:130px; text-align:left; transition:.15s;
+  }
+  #ui button:hover { border-color:#7fb8e8; color:#fff; }
+  #ui button.on { border-color:#e0618a; color:#ffb6d0; }
+  #ui button small { display:block; color:#6c7b8c; font-size:10px; }
+  #note { bottom:14px; right:14px; color:#5d6b7c; font-size:10px; max-width:170px; }
+</style>
+</head>
+<body>
+
+<div class="panel" id="keys">
+  <h1>Controls</h1>
+  <div><b>Mouse</b><span>move hand</span></div>
+  <div><b>Click</b><span>press / touch</span></div>
+  <div><b>Wheel</b><span>thrust depth</span></div>
+  <div><b>Space</b><span>auto thrust</span></div>
+  <div><b>C</b><span>section view</span></div>
+  <div><b>O</b><span>swap orifice</span></div>
+  <div><b>V</b><span>clothes</span></div>
+  <div><b>P</b><span>change pose</span></div>
+</div>
+
+<div class="panel" id="meters">
+  <div class="row"><span>Zone</span><span id="zone">—</span></div>
+  <div class="row"><span>Arousal</span><span id="arousalTxt">0%</span></div>
+  <div class="bar" id="arousalBar"><i></i></div>
+  <div class="row"><span>Insertion</span><span id="depthTxt">0%</span></div>
+  <div class="bar" id="depthBar"><i></i></div>
+</div>
+
+<div id="ui">
+  <button id="btnAuto">Auto thrust <small>space</small></button>
+  <button id="btnSection" class="on">Section view <small>c</small></button>
+  <button id="btnOrifice">Orifice: vagina <small>o</small></button>
+  <button id="btnClothes">Clothes: on <small>v</small></button>
+  <button id="btnPose">Pose: standing <small>p</small></button>
+</div>
+
+<div class="panel" id="note">Inset = live cross-section. The translucent hand follows your cursor across her body.</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.161.0/build/three.module.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+/* ══════════════════════════════ 1. RENDERER / SCENE ══════════════════════════════ */
+
+const renderer = new THREE.WebGLRenderer({ antialias:true, stencil:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.localClippingEnabled = true;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0e1014);
+scene.fog = new THREE.Fog(0x0e1014, 3.4, 9);
+
+const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, 0.05, 40);
+const sectionCamera = new THREE.PerspectiveCamera(30, 1, 0.05, 40);
+
+scene.add(new THREE.HemisphereLight(0xbcd4ff, 0x2a1e26, 1.15));
+const key = new THREE.DirectionalLight(0xffe4cf, 2.6); key.position.set(1.8, 3.2, 2.4); scene.add(key);
+const rim = new THREE.DirectionalLight(0x8fb8ff, 1.9); rim.position.set(-2.2, 1.6, -2.0); scene.add(rim);
+const fill = new THREE.PointLight(0xff9ec4, 2.2, 4); fill.position.set(0, 0.9, 1.3); scene.add(fill);
+
+const floor = new THREE.Mesh(
+  new THREE.CircleGeometry(9, 48).rotateX(-Math.PI/2),
+  new THREE.MeshStandardMaterial({ color:0x1a1e26, roughness:0.9, metalness:0.05 })
+);
+scene.add(floor);
+
+/* ══════════════════════════════ 2. SHARED SHADER UNIFORMS ══════════════════════════════ */
+
+const U = {
+  uTouch:  { value: new THREE.Vector3(0, -9, 0) },
+  uAmount: { value: 0 },
+  uRadius: { value: 0.14 },
+  uO0: { value: new THREE.Vector3(0, -9, 0) },
+  uO1: { value: new THREE.Vector3(0, -9, 0) },
+  uOpen0: { value: 0 }, uOpen1: { value: 0 },
+  uAx0: { value: new THREE.Vector3(0,0,1) },
+  uAx1: { value: new THREE.Vector3(0,0,1) },
+};
+
+function patchBody(mat) {
+  mat.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, U);
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `
+        #include <common>
+        uniform vec3 uTouch; uniform float uAmount; uniform float uRadius;
+        uniform vec3 uO0; uniform vec3 uO1;
+        uniform float uOpen0; uniform float uOpen1;
+        uniform vec3 uAx0; uniform vec3 uAx1;
+
+        vec3 orificeStretch(vec3 p, vec3 c, vec3 ax, float open) {
+          if (open <= 0.0001) return p;
+          vec3 rel  = p - c;
+          float al  = dot(rel, ax);
+          vec3  rad = rel - ax * al;
+          float r   = length(rad) + 1e-5;
+          float ring = smoothstep(0.072, 0.0, r);
+          p += (rad / r) * ring * open * 0.052;
+          p -= ax * ring * open * 0.042;
+          return p;
+        }
+      `)
+      .replace('#include <skinning_vertex>', `
+        #include <skinning_vertex>
+        {
+          float d    = distance(transformed, uTouch);
+          float infl = uAmount * smoothstep(uRadius, 0.0, d);
+          transformed += normalize(transformed - uTouch + 1e-5) * infl * 0.05;
+          transformed = orificeStretch(transformed, uO0, uAx0, uOpen0);
+          transformed = orificeStretch(transformed, uO1, uAx1, uOpen1);
+        }
+      `);
+  };
+  mat.customProgramCacheKey = () => 'bodyV1';
+}
+
+const skinMat  = new THREE.MeshStandardMaterial({ color:0xf0c4a8, roughness:0.63, metalness:0.0, side:THREE.DoubleSide });
+const clothMat = new THREE.MeshStandardMaterial({ color:0xe8eef6, roughness:0.82, side:THREE.DoubleSide });
+const hairMat  = new THREE.MeshStandardMaterial({ color:0x2b2029, roughness:0.5, side:THREE.DoubleSide });
+patchBody(skinMat); patchBody(clothMat);
+
+/* ══════════════════════════════ 3. CHARACTER (procedural, all geometry baked to root space) ══════════════════════════════ */
+
+const root = new THREE.Group();
+scene.add(root);
+
+const bodyGroup = new THREE.Group(); root.add(bodyGroup);
+const pickables = [];
+
+function add(geo, mat = skinMat, group = bodyGroup) {
+  const m = new THREE.Mesh(geo, mat);
+  m.frustumCulled = false;
+  group.add(m);
+  if (group === bodyGroup) pickables.push(m);
+  return m;
+}
+function ball(r, p, s = [1,1,1], seg = [26, 18]) {
+  const g = new THREE.SphereGeometry(r, seg[0], seg[1]);
+  g.scale(s[0], s[1], s[2]); g.translate(p[0], p[1], p[2]);
+  return g;
+}
+function limb(r, a, b, seg = 16) {
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
+  const len = A.distanceTo(B);
+  const g = new THREE.CapsuleGeometry(r, Math.max(len - r*2, 0.001), 5, seg);
+  const q = new THREE.Quaternion().setFromUnitVectors(
+    new THREE.Vector3(0,1,0), B.clone().sub(A).normalize()
+  );
+  g.applyMatrix4(new THREE.Matrix4().compose(
+    A.clone().add(B).multiplyScalar(0.5), q, new THREE.Vector3(1,1,1)
+  ));
+  return g;
+}
+
+// torso / head — high tessellation on the pelvis so the orifice shader has geometry to work with
+add(ball(0.132, [0, 0.945, 0.0],  [1.00, 0.86, 0.96], [40, 28]));   // pelvis
+add(ball(0.108, [0, 1.065, 0.005],[1.00, 0.92, 0.80]));             // waist
+add(ball(0.126, [0, 1.235, 0.005],[1.00, 0.96, 0.78]));             // ribcage
+add(ball(0.073, [-0.076, 1.272, 0.088], [1,0.94,1.0], [26,20]));    // breast L
+add(ball(0.073, [ 0.076, 1.272, 0.088], [1,0.94,1.0], [26,20]));    // breast R
+add(ball(0.086, [-0.066, 0.888, -0.068], [1,0.94,0.96]));           // glute L
+add(ball(0.086, [ 0.066, 0.888, -0.068], [1,0.94,0.96]));           // glute R
+add(ball(0.056, [-0.146, 1.372, 0]));                               // shoulder L
+add(ball(0.056, [ 0.146, 1.372, 0]));                               // shoulder R
+add(limb(0.039, [0, 1.395, 0], [0, 1.505, 0.008]));                 // neck
+add(ball(0.106, [0, 1.585, 0.006], [0.95, 1.08, 1.0], [30,22]));    // head
+add(ball(0.118, [0, 1.60, -0.030], [1.02, 1.04, 1.02], [28,20
