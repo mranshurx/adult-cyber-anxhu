@@ -259,4 +259,447 @@ add(ball(0.073, [ 0.076, 1.272, 0.088], [1, 0.94, 1.0], [26, 20]));
 add(ball(0.082, [-0.080, 0.888, -0.062], [1, 0.95, 1.00]));          // glutes
 add(ball(0.082, [ 0.080, 0.888, -0.062], [1, 0.95, 1.00]));
 add(ball(0.056, [-0.146, 1.372, 0]));
-add(ball(0.056, [ 0.146, 1.372
+add(ball(0.056, [ 0.146, 1.372, 0]));
+add(limb(0.039, [0, 1.395, 0], [0, 1.505, 0.008]));
+add(ball(0.106, [0, 1.585, 0.006], [0.95, 1.08, 1.0], [30, 22]));    // head
+add(ball(0.118, [0, 1.600, -0.030], [1.02, 1.04, 1.02], [28, 20]), hairMat);
+add(limb(0.062, [0, 1.500, -0.085], [0, 1.140, -0.140], 14), hairMat);
+
+for (const s of [-1, 1]) {
+  add(limb(0.042, [s * 0.155, 1.362, 0], [s * 0.205, 1.105, 0.02]));
+  add(limb(0.035, [s * 0.205, 1.105, 0.02], [s * 0.220, 0.875, 0.05]));
+  add(ball(0.043, [s * 0.223, 0.838, 0.058], [0.65, 1, 1.25]));
+  add(limb(0.073, [s * 0.069, 0.905, 0], [s * 0.076, 0.505, 0.012]));
+  add(limb(0.055, [s * 0.076, 0.505, 0.012], [s * 0.079, 0.095, 0.006]));
+  add(ball(0.050, [s * 0.079, 0.046, 0.052], [0.9, 0.5, 1.7]));
+}
+
+add(ball(0.140, [0, 1.238, 0.004], [1.02, 0.96, 0.83]), clothMat, clothGroup);
+add(ball(0.140, [0, 0.945, 0.000], [1.03, 0.72, 1.00]), clothMat, clothGroup);
+
+/* ═══════════════════════════ 5. ANATOMY — VULVA ═══════════════════════════
+   Built in a local frame (origin = vulvar centre, +Y up the slit, +Z outward),
+   then tilted forward-and-down and placed at the front of the pelvis.        */
+
+const TILT = -0.35;                       // rotation about X: outward normal tips downward
+const VPOS = [0, 0.868, 0.104];
+
+const vulvaSkin = [], vulvaMuc = [], vulvaDeep = [];
+function vPart(list, geo) {
+  geo.rotateX(TILT);
+  geo.translate(VPOS[0], VPOS[1], VPOS[2]);
+  list.push(geo);
+}
+
+/* mons pubis — sits on the pelvis, blends into the body */
+add(ball(0.048, [0, 0.906, 0.070], [1.18, 0.78, 0.78], [24, 18]));
+
+/* labia majora — full outer lips, elongated vertically, meeting at the bottom */
+vPart(vulvaSkin, ball(0.026, [-0.031, -0.004, 0.009], [0.95, 1.55, 0.82], [22, 26]));
+vPart(vulvaSkin, ball(0.026, [ 0.031, -0.004, 0.009], [0.95, 1.55, 0.82], [22, 26]));
+vPart(vulvaSkin, ball(0.019, [ 0.000, -0.040, 0.004], [1.35, 0.62, 0.80], [20, 16])); // fourchette
+
+/* labia minora — thin mucosal folds inside the majora */
+vPart(vulvaMuc, ball(0.0140, [-0.0145, -0.013, 0.0215], [0.78, 1.45, 0.66], [18, 26]));
+vPart(vulvaMuc, ball(0.0140, [ 0.0145, -0.013, 0.0215], [0.78, 1.45, 0.66], [18, 26]));
+
+/* clitoral hood + glans */
+vPart(vulvaSkin, ball(0.0128, [0, 0.0210, 0.0225], [1.05, 0.82, 0.72], [18, 14]));
+vPart(vulvaMuc,  ball(0.0068, [0, 0.0150, 0.0300], [1.00, 1.00, 0.95], [14, 12]));
+
+/* vestibule — recessed darker tissue behind the opening */
+vPart(vulvaDeep, ball(0.0205, [0, -0.014, 0.0135], [1.00, 1.05, 0.55], [22, 16]));
+
+/* vaginal introitus ring */
+vPart(vulvaMuc, new THREE.TorusGeometry(0.0138, 0.0052, 8, 28)
+  .translate(0, -0.014, 0.0250));
+
+/* ═══════════════════════════ 6. ANATOMY — ANUS ═══════════════════════════ */
+
+const ATILT = 0.222;                      // canal axis leans up-and-forward
+
+add(ball(0.040, [0, 0.876, -0.076], [0.90, 1.05, 0.95], [24, 18]));   // anal mound
+add(new THREE.TorusGeometry(0.0142, 0.0050, 8, 28)
+  .rotateX(ATILT).translate(0, 0.876, -0.110), anusMat);              // sphincter
+add(new THREE.TorusGeometry(0.0215, 0.0034, 6, 28)
+  .rotateX(ATILT).translate(0, 0.876, -0.104), anusMat);              // outer wrinkle
+add(ball(0.0135, [0, 0.876, -0.104], [1, 1, 0.42], [18, 14]), deepMat); // dimple
+
+/* push the vulva meshes into the scene */
+vulvaSkin.forEach(g => add(g, skinMat));
+vulvaMuc.forEach(g => add(g, mucosaMat));
+vulvaDeep.forEach(g => add(g, deepMat));
+
+/* ═══════════════════════════ 7. EVENT BUS + ORIFICES ═══════════════════════════ */
+
+const bus = {
+  m: {},
+  on(k, f) { (this.m[k] = this.m[k] || []).push(f); },
+  emit(k, v) { (this.m[k] || []).forEach(f => f(v)); }
+};
+
+class Orifice {
+  constructor(surface, inwardAxis, radius, maxDepth, spread, label) {
+    this.surface  = new THREE.Vector3(surface[0], surface[1], surface[2]);
+    this.axis     = new THREE.Vector3(inwardAxis[0], inwardAxis[1], inwardAxis[2]).normalize();
+    this.radius   = radius;
+    this.maxDepth = maxDepth;
+    this.spread   = spread;
+    this.label    = label;
+    this.depth = 0; this.lateral = 0; this.engaged = false; this.speed = 0; this.open = 0;
+  }
+  solve(tipLocal, dt) {
+    const rel   = tipLocal.clone().sub(this.surface);
+    const along = rel.dot(this.axis);
+    const prev  = this.depth;
+
+    this.depth   = Math.min(Math.max(along, 0), this.maxDepth);
+    this.lateral = rel.addScaledVector(this.axis, -along).length();
+    this.speed   = (this.depth - prev) / Math.max(dt, 1e-4);
+
+    const inside = this.depth > 0.0015 && this.lateral < this.radius * 2.1;
+    if (inside !== this.engaged) bus.emit(inside ? 'insert' : 'withdraw', this);
+    this.engaged = inside;
+
+    const want = inside ? Math.min(1, this.depth / (this.maxDepth * 0.35)) : 0;
+    this.open += (want - this.open) * Math.min(1, dt * 9);
+  }
+}
+
+/* inward axis points INTO the body — tip starts outside at negative dot, enters past zero */
+const ORIFICES = [
+  new Orifice([0, 0.8620, 0.1320], [0, 0.343, -0.939], 0.024, 0.135, 0.034, 'vagina'),
+  new Orifice([0, 0.8760, -0.1120], [0, 0.220, 0.975], 0.017, 0.120, 0.024, 'anus')
+];
+let activeOrifice = 0;
+
+/* ═══════════════════════════ 8. PENETRATOR ═══════════════════════════ */
+
+const penMat = new THREE.MeshStandardMaterial({
+  color: 0xe58aa8, roughness: 0.22, emissive: 0x40101f, emissiveIntensity: 0.35
+});
+const penGeo = new THREE.CapsuleGeometry(0.019, 0.118, 6, 18);
+penGeo.rotateX(Math.PI / 2);
+penGeo.translate(0, 0, -(0.118 / 2 + 0.019));   // tip at local z = 0, shaft toward -z
+const penetrator = new THREE.Mesh(penGeo, penMat);
+penetrator.frustumCulled = false;
+root.add(penetrator);
+
+/* ═══════════════════════════ 9. SECTION CUT + STENCIL CAP ═══════════════════════════ */
+
+const cut = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
+const cutLocal = cut.clone();
+
+const writerMat = new THREE.MeshBasicMaterial({
+  side: THREE.BackSide,
+  clippingPlanes: [cut],
+  colorWrite: false,
+  depthWrite: false,
+  stencilWrite: true,
+  stencilFunc: THREE.AlwaysStencilFunc,
+  stencilFail: THREE.IncrementWrapStencilOp,
+  stencilZFail: THREE.IncrementWrapStencilOp,
+  stencilZPass: THREE.IncrementWrapStencilOp
+});
+const capGroup = new THREE.Group(); root.add(capGroup);
+bodyGroup.children.forEach(m => capGroup.add(new THREE.Mesh(m.geometry, writerMat)));
+
+const capMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(2.8, 2.8),
+  new THREE.MeshBasicMaterial({
+    color: 0xc46f85, side: THREE.DoubleSide,
+    transparent: true, opacity: 0.55, depthWrite: false,
+    stencilWrite: true, stencilRef: 0, stencilFunc: THREE.NotEqualStencilFunc,
+    stencilFail: THREE.ReplaceStencilOp,
+    stencilZFail: THREE.ReplaceStencilOp,
+    stencilZPass: THREE.ReplaceStencilOp
+  })
+);
+capMesh.renderOrder = 20;
+capMesh.visible = false;
+scene.add(capMesh);
+
+[...bodyGroup.children, ...clothGroup.children, penetrator].forEach(m => {
+  m.material.clippingPlanes = [cut];
+});
+
+/* ═══════════════════════════ 10. HAND ═══════════════════════════ */
+
+const handMat = new THREE.MeshStandardMaterial({
+  color: 0x9fe0ff, transparent: true, opacity: 0.42,
+  emissive: 0x2f86c0, emissiveIntensity: 0.9,
+  roughness: 0.2, metalness: 0.15, side: THREE.DoubleSide
+});
+const hand = new THREE.Group();
+hand.position.set(0, 1.28, 0.34);
+scene.add(hand);
+{
+  const palm = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), handMat);
+  palm.scale.set(0.042, 0.013, 0.048);
+  hand.add(palm);
+  for (let i = 0; i < 4; i++) {
+    const len = 0.055 - Math.abs(i - 1.2) * 0.006;
+    const f = new THREE.Mesh(new THREE.CapsuleGeometry(0.0075, len, 4, 10), handMat);
+    f.rotation.x = Math.PI / 2;
+    f.position.set(-0.031 + i * 0.021, 0, 0.048 + len / 2);
+    hand.add(f);
+  }
+  const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(0.0095, 0.042, 4, 10), handMat);
+  thumb.rotation.set(Math.PI / 2, 0, -1.05);
+  thumb.position.set(-0.048, 0.002, 0.026);
+  hand.add(thumb);
+}
+
+/* ═══════════════════════════ 11. TOUCH ZONES ═══════════════════════════ */
+
+const ZONES = [
+  { n: 'head',     p: [ 0.000, 1.590,  0.020], r: 0.130, a: 3 },
+  { n: 'cheek',    p: [ 0.072, 1.560,  0.070], r: 0.055, a: 4 },
+  { n: 'neck',     p: [ 0.000, 1.452,  0.035], r: 0.065, a: 5 },
+  { n: 'chest',    p: [ 0.000, 1.320,  0.055], r: 0.085, a: 5 },
+  { n: 'breast L', p: [-0.076, 1.272,  0.098], r: 0.082, a: 9 },
+  { n: 'breast R', p: [ 0.076, 1.272,  0.098], r: 0.082, a: 9 },
+  { n: 'belly',    p: [ 0.000, 1.080,  0.062], r: 0.085, a: 6 },
+  { n: 'mons',     p: [ 0.000, 0.906,  0.112], r: 0.052, a: 9 },
+  { n: 'clitoris', p: [ 0.000, 0.897,  0.126], r: 0.032, a: 13 },
+  { n: 'pussy',    p: [ 0.000, 0.862,  0.136], r: 0.042, a: 15 },
+  { n: 'anus',     p: [ 0.000, 0.876, -0.118], r: 0.038, a: 14 },
+  { n: 'hip',      p: [ 0.104, 0.948,  0.040], r: 0.075, a: 7 },
+  { n: 'thigh L',  p: [-0.076, 0.700,  0.052], r: 0.072, a: 8 },
+  { n: 'thigh R',  p: [ 0.076, 0.700,  0.052], r: 0.072, a: 8 },
+  { n: 'glute L',  p: [-0.080, 0.888, -0.130], r: 0.072, a: 10 },
+  { n: 'glute R',  p: [ 0.080, 0.888, -0.130], r: 0.072, a: 10 }
+].map(z => ({
+  n: z.n, r: z.r, a: z.a, inside: false,
+  v: new THREE.Vector3(z.p[0], z.p[1], z.p[2])
+}));
+
+/* ═══════════════════════════ 12. AUDIO ═══════════════════════════ */
+
+let actx = null;
+function blip(freq, dur, vol) {
+  if (!actx) return;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = 'sine';
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
+  o.connect(g); g.connect(actx.destination);
+  o.start(); o.stop(actx.currentTime + dur);
+}
+addEventListener('pointerdown', () => {
+  if (!actx) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (Ctx) actx = new Ctx();
+  }
+}, { once: true });
+
+/* ═══════════════════════════ 13. STATE + UI ═══════════════════════════ */
+
+const $ = id => document.getElementById(id);
+
+const state = {
+  arousal: 0, auto: false, section: true, clothes: true, pose: 0,
+  thrust: { target: 0.35, pos: 0.35, vel: 0 },
+  press: 0, pressTarget: 0, lastZone: '—'
+};
+
+const POSES = [
+  { name: 'standing', pos: [0, 0, 0], rot: [0, 0, 0],
+    cam: [0.32, 1.02, 2.15], look: [0, 0.95, 0],
+    scm: [1.05, 0.90, 0.30], slook: [0, 0.88, 0.04] },
+  { name: 'on back', pos: [0, 0.28, 0.72], rot: [-Math.PI / 2, 0, 0],
+    cam: [0.55, 0.80, 0.90], look: [0, 0.30, -0.15],
+    scm: [1.05, 0.42, -0.12], slook: [0, 0.28, -0.12] }
+];
+
+const pointer = new THREE.Vector2(0, 0);
+const ray = new THREE.Raycaster();
+const handTarget = new THREE.Vector3(0, 1.28, 0.34);
+const handNormal = new THREE.Vector3(0, 0, 1);
+const depthPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), -0.12);
+const tmp = new THREE.Vector3();
+const tmp2 = new THREE.Vector3();
+const tmpN = new THREE.Matrix3();
+
+function setAuto(v)    { state.auto = v;    $('bAuto').classList.toggle('on', v); }
+function setSection(v) { state.section = v; $('bSect').classList.toggle('on', v); }
+function setClothes(v) { state.clothes = v; clothGroup.visible = v; $('bCloth').firstChild.nodeValue = 'Clothes: ' + (v ? 'on' : 'off') + ' '; }
+function setOrifice(i) { activeOrifice = i; $('bOrif').firstChild.nodeValue = 'Orifice: ' + ORIFICES[i].label + ' '; }
+function setPose(i)    { state.pose = ((i % POSES.length) + POSES.length) % POSES.length; $('bPose').firstChild.nodeValue = 'Pose: ' + POSES[state.pose].name + ' '; }
+
+$('bAuto').onclick  = () => setAuto(!state.auto);
+$('bSect').onclick  = () => setSection(!state.section);
+$('bOrif').onclick  = () => setOrifice((activeOrifice + 1) % ORIFICES.length);
+$('bCloth').onclick = () => setClothes(!state.clothes);
+$('bPose').onclick  = () => setPose(state.pose + 1);
+
+addEventListener('pointermove', e => {
+  pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+});
+addEventListener('pointerdown', () => { state.pressTarget = 1; });
+addEventListener('pointerup',   () => { state.pressTarget = 0; });
+addEventListener('pointercancel', () => { state.pressTarget = 0; });
+addEventListener('wheel', e => {
+  state.thrust.target = Math.min(1, Math.max(0, state.thrust.target - e.deltaY * 0.0009));
+}, { passive: true });
+
+addEventListener('keydown', e => {
+  if (e.code === 'Space') { setAuto(!state.auto); e.preventDefault(); }
+  if (e.key === 'c') setSection(!state.section);
+  if (e.key === 'o') setOrifice((activeOrifice + 1) % ORIFICES.length);
+  if (e.key === 'v') setClothes(!state.clothes);
+  if (e.key === 'p') setPose(state.pose + 1);
+  if (e.key === 'w') state.thrust.target = Math.min(1, state.thrust.target + 0.06);
+  if (e.key === 's') state.thrust.target = Math.max(0, state.thrust.target - 0.06);
+});
+
+bus.on('insert',   () => { state.arousal = Math.min(100, state.arousal + 7); blip(150, 0.18, 0.05); });
+bus.on('withdraw', () => blip(110, 0.10, 0.03));
+
+/* ═══════════════════════════ 14. UPDATE ═══════════════════════════ */
+
+const clock = new THREE.Clock();
+const q = new THREE.Quaternion();
+const basisM = new THREE.Matrix4();
+const tipLocal = new THREE.Vector3();
+const rootInv = new THREE.Matrix4();
+
+function update(dt) {
+  const P = POSES[state.pose];
+  root.position.lerp(tmp.set(P.pos[0], P.pos[1], P.pos[2]), Math.min(1, dt * 5));
+  root.rotation.x += (P.rot[0] - root.rotation.x) * Math.min(1, dt * 5);
+  root.updateMatrixWorld(true);
+
+  /* hand target */
+  ray.setFromCamera(pointer, camera);
+  const hits = ray.intersectObjects(pickables, false);
+  if (hits.length) {
+    const h = hits[0];
+    handTarget.copy(h.point);
+    tmpN.getNormalMatrix(h.object.matrixWorld);
+    handNormal.copy(h.face.normal).applyMatrix3(tmpN).normalize();
+    if (handNormal.dot(ray.ray.direction) > 0) handNormal.negate();
+  } else if (ray.ray.intersectPlane(depthPlane, tmp2)) {
+    handTarget.copy(tmp2);
+    handNormal.set(0, 0, 1);
+  }
+
+  state.press += (state.pressTarget - state.press) * Math.min(1, dt * 12);
+  tmp2.copy(handTarget).addScaledVector(handNormal, -0.030 * state.press);
+  hand.position.lerp(tmp2, Math.min(1, dt * 16));
+
+  const n = handNormal.clone().normalize();
+  const t = new THREE.Vector3(0, 1, 0).sub(n.clone().multiplyScalar(n.y));
+  if (t.lengthSq() < 0.02) t.set(0, 0, 1);
+  t.normalize();
+  const bx = new THREE.Vector3().crossVectors(n, t).normalize();
+  basisM.makeBasis(bx, n, t);
+  hand.quaternion.slerp(q.setFromRotationMatrix(basisM), Math.min(1, dt * 10));
+
+  rootInv.copy(root.matrixWorld).invert();
+  const local = hand.position.clone().applyMatrix4(rootInv);
+  U.uTouch.value.copy(local);
+  U.uAmount.value = state.press * 0.85;
+
+  for (const z of ZONES) {
+    const near = local.distanceTo(z.v) < z.r + 0.045;
+    if (near && !z.inside) {
+      state.lastZone = z.n;
+      state.arousal = Math.min(100, state.arousal + z.a * 0.55);
+      blip(210 + z.a * 22, 0.12, 0.045);
+    }
+    z.inside = near;
+  }
+
+  if (state.auto) state.thrust.target = 0.5 + Math.sin(performance.now() * 0.0042) * 0.48;
+  const th = state.thrust;
+  th.vel += (th.target - th.pos) * 0.19;
+  th.vel *= 0.74;
+  th.pos = Math.min(1, Math.max(0, th.pos + th.vel));
+
+  const orc = ORIFICES[activeOrifice];
+  tipLocal.copy(orc.surface).addScaledVector(orc.axis, th.pos * orc.maxDepth);
+  orc.solve(tipLocal, dt);
+
+  penetrator.position.copy(tipLocal);
+  penetrator.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), orc.axis);
+
+  const other = ORIFICES[(activeOrifice + 1) % 2];
+  U.uOrifice0.value.copy(orc.surface);   U.uAxis0.value.copy(orc.axis);
+  U.uOpen0.value = orc.open;             U.uSpread0.value = orc.spread;
+  U.uOrifice1.value.copy(other.surface); U.uAxis1.value.copy(other.axis);
+  U.uOpen1.value = other.open;           U.uSpread1.value = other.spread;
+
+  state.arousal = Math.min(100, state.arousal + Math.abs(orc.speed) * dt * 3.2);
+  state.arousal *= (1 - dt * 0.055);
+
+  camera.position.lerp(tmp.set(P.cam[0], P.cam[1], P.cam[2]), Math.min(1, dt * 4));
+  camera.lookAt(P.look[0], P.look[1], P.look[2]);
+  sectionCamera.position.lerp(tmp.set(P.scm[0], P.scm[1], P.scm[2]), Math.min(1, dt * 4));
+  sectionCamera.lookAt(P.slook[0], P.slook[1], P.slook[2]);
+
+  cut.copy(cutLocal).applyMatrix4(root.matrixWorld);
+  capMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), cut.normal);
+  capMesh.position.setFromMatrixPosition(root.matrixWorld);
+
+  $('zone').textContent = state.lastZone;
+  const a = Math.round(state.arousal);
+  $('aTxt').textContent = a + '%';
+  $('ab').firstChild.style.width = a + '%';
+  const dp = Math.round(th.pos * 100);
+  $('dTxt').textContent = dp + '%';
+  $('db').firstChild.style.width = dp + '%';
+}
+
+/* ═══════════════════════════ 15. RENDER ═══════════════════════════ */
+
+function render() {
+  cut.constant += 1000;
+  capMesh.visible = false;
+  renderer.setScissorTest(false);
+  renderer.setViewport(0, 0, innerWidth, innerHeight);
+  renderer.render(scene, camera);
+  cut.constant -= 1000;
+
+  if (!state.section) return;
+
+  const w = innerWidth * 0.34, h = innerHeight * 0.34, pad = 16;
+  capMesh.visible = true;
+  sectionCamera.aspect = w / h;
+  sectionCamera.updateProjectionMatrix();
+
+  renderer.setScissorTest(true);
+  renderer.setViewport(innerWidth - w - pad, pad, w, h);
+  renderer.setScissor(innerWidth - w - pad, pad, w, h);
+  renderer.render(scene, sectionCamera);
+  renderer.setScissorTest(false);
+}
+
+/* ═══════════════════════════ 16. BOOT ═══════════════════════════ */
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+setOrifice(0);
+setClothes(true);
+setPose(0);
+setSection(true);
+setAuto(false);
+
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  try {
+    update(dt);
+    render();
+  } catch (e) {
+    fail(e);
+    renderer.setAnimationLoop(null);
+  }
+});
+</script>
+</body>
+</html>
