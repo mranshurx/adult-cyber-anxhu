@@ -5,40 +5,42 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>Touch — browser 3D</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  html,body { height:100%; overflow:hidden; background:#0e1014; }
-  canvas { display:block; }
-  body { font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; color:#dfe6ef; }
-  .panel {
-    position:fixed; background:rgba(14,16,20,.72); backdrop-filter:blur(10px);
-    border:1px solid rgba(255,255,255,.09); border-radius:10px; padding:10px 12px;
-    pointer-events:none;
-  }
-  #keys { top:14px; left:14px; max-width:230px; }
-  #keys h1 { font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#7fb8e8; margin-bottom:8px; }
-  #keys div { display:flex; gap:8px; margin:3px 0; color:#9aa7b6; }
-  #keys b { color:#e8eef6; font-weight:500; min-width:52px; display:inline-block; }
-  #meters { bottom:14px; left:14px; width:220px; }
-  .row { display:flex; justify-content:space-between; margin-bottom:4px; color:#8fa0b2; }
-  .row span:last-child { color:#e8eef6; }
-  .bar { height:5px; background:rgba(255,255,255,.09); border-radius:3px; overflow:hidden; margin-bottom:9px; }
-  .bar i { display:block; height:100%; width:0%; border-radius:3px; transition:width .12s; }
-  #arousalBar i { background:linear-gradient(90deg,#e0618a,#ff9ec4); }
-  #depthBar i   { background:linear-gradient(90deg,#4a90d9,#7fd4ff); }
-  #zone { color:#ffd9a0; }
-  #ui { position:fixed; top:14px; right:14px; display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
-  #ui button {
-    font:inherit; cursor:pointer; color:#cfd8e3; background:rgba(14,16,20,.72);
-    border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:7px 11px;
-    backdrop-filter:blur(10px); min-width:130px; text-align:left; transition:.15s;
-  }
-  #ui button:hover { border-color:#7fb8e8; color:#fff; }
-  #ui button.on { border-color:#e0618a; color:#ffb6d0; }
-  #ui button small { display:block; color:#6c7b8c; font-size:10px; }
-  #note { bottom:14px; right:14px; color:#5d6b7c; font-size:10px; max-width:170px; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:#0e1014;touch-action:none}
+  canvas{display:block}
+  body{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#dfe6ef}
+  .panel{position:fixed;background:rgba(14,16,20,.74);backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:10px 12px;pointer-events:none}
+  #keys{top:14px;left:14px;max-width:225px}
+  #keys h1{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#7fb8e8;margin-bottom:8px}
+  #keys div{display:flex;gap:8px;margin:3px 0;color:#9aa7b6}
+  #keys b{color:#e8eef6;font-weight:500;min-width:50px;display:inline-block}
+  #meters{bottom:14px;left:14px;width:215px}
+  .row{display:flex;justify-content:space-between;margin-bottom:4px;color:#8fa0b2}
+  .row span:last-child{color:#e8eef6}
+  .bar{height:5px;background:rgba(255,255,255,.09);border-radius:3px;overflow:hidden;margin-bottom:9px}
+  .bar i{display:block;height:100%;width:0;border-radius:3px}
+  #ab i{background:linear-gradient(90deg,#e0618a,#ff9ec4)}
+  #db i{background:linear-gradient(90deg,#4a90d9,#7fd4ff)}
+  #zone{color:#ffd9a0}
+  #ui{position:fixed;top:14px;right:14px;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+  #ui button{font:inherit;cursor:pointer;color:#cfd8e3;background:rgba(14,16,20,.74);
+    border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 11px;
+    backdrop-filter:blur(10px);min-width:135px;text-align:left;transition:.15s}
+  #ui button:hover{border-color:#7fb8e8;color:#fff}
+  #ui button.on{border-color:#e0618a;color:#ffb6d0}
+  #ui button small{display:block;color:#6c7b8c;font-size:10px}
+  #note{bottom:14px;right:14px;color:#5d6b7c;font-size:10px;max-width:165px}
+  #err{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);max-width:80%;
+    background:#2a1218;border:1px solid #e0618a;border-radius:10px;padding:16px 20px;
+    color:#ffc9dc;white-space:pre-wrap;display:none;z-index:99;font-size:12px}
+  #boot{position:fixed;inset:0;display:grid;place-items:center;color:#7fb8e8;letter-spacing:.2em;
+    font-size:11px;text-transform:uppercase;background:#0e1014;z-index:50}
 </style>
 </head>
 <body>
+<div id="boot">loading…</div>
+<div id="err"></div>
 
 <div class="panel" id="keys">
   <h1>Controls</h1>
@@ -54,32 +56,45 @@
 
 <div class="panel" id="meters">
   <div class="row"><span>Zone</span><span id="zone">—</span></div>
-  <div class="row"><span>Arousal</span><span id="arousalTxt">0%</span></div>
-  <div class="bar" id="arousalBar"><i></i></div>
-  <div class="row"><span>Insertion</span><span id="depthTxt">0%</span></div>
-  <div class="bar" id="depthBar"><i></i></div>
+  <div class="row"><span>Arousal</span><span id="aTxt">0%</span></div>
+  <div class="bar" id="ab"><i></i></div>
+  <div class="row"><span>Insertion</span><span id="dTxt">0%</span></div>
+  <div class="bar" id="db"><i></i></div>
 </div>
 
 <div id="ui">
-  <button id="btnAuto">Auto thrust <small>space</small></button>
-  <button id="btnSection" class="on">Section view <small>c</small></button>
-  <button id="btnOrifice">Orifice: vagina <small>o</small></button>
-  <button id="btnClothes">Clothes: on <small>v</small></button>
-  <button id="btnPose">Pose: standing <small>p</small></button>
+  <button id="bAuto">Auto thrust <small>space</small></button>
+  <button id="bSect" class="on">Section view <small>c</small></button>
+  <button id="bOrif">Orifice: vagina <small>o</small></button>
+  <button id="bCloth">Clothes: on <small>v</small></button>
+  <button id="bPose">Pose: standing <small>p</small></button>
 </div>
 
-<div class="panel" id="note">Inset = live cross-section. The translucent hand follows your cursor across her body.</div>
-
-<script type="importmap">
-{ "imports": { "three": "https://unpkg.com/three@0.161.0/build/three.module.js" } }
-</script>
+<div class="panel" id="note">Inset = live cross-section. Translucent hand follows your cursor.</div>
 
 <script type="module">
-import * as THREE from 'three';
+/* ── fatal error surface ─────────────────────────────────────────── */
+const errBox = document.getElementById('err');
+function fail(e) {
+  errBox.style.display = 'block';
+  errBox.textContent = 'ERROR\n\n' + (e && e.stack ? e.stack : e);
+  console.error(e);
+}
+addEventListener('error', ev => fail(ev.error || ev.message));
+addEventListener('unhandledrejection', ev => fail(ev.reason));
 
-/* ══════════════════════════════ 1. RENDERER / SCENE ══════════════════════════════ */
+/* ── import three with CDN fallback ──────────────────────────────── */
+let THREE;
+try {
+  THREE = await import('https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js');
+} catch (e) {
+  THREE = await import('https://unpkg.com/three@0.161.0/build/three.module.js');
+}
+document.getElementById('boot').remove();
 
-const renderer = new THREE.WebGLRenderer({ antialias:true, stencil:true });
+/* ═══════════════════════════ 1. RENDERER / SCENE ═══════════════════════════ */
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, stencil: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -90,33 +105,38 @@ document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0e1014);
-scene.fog = new THREE.Fog(0x0e1014, 3.4, 9);
 
-const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, 0.05, 40);
+const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.05, 40);
+camera.position.set(0.32, 1.02, 2.15);
+camera.lookAt(0, 0.95, 0);
+
 const sectionCamera = new THREE.PerspectiveCamera(30, 1, 0.05, 40);
+sectionCamera.position.set(1.15, 0.98, 0.30);
+sectionCamera.lookAt(0, 0.95, 0.02);
 
-scene.add(new THREE.HemisphereLight(0xbcd4ff, 0x2a1e26, 1.15));
-const key = new THREE.DirectionalLight(0xffe4cf, 2.6); key.position.set(1.8, 3.2, 2.4); scene.add(key);
-const rim = new THREE.DirectionalLight(0x8fb8ff, 1.9); rim.position.set(-2.2, 1.6, -2.0); scene.add(rim);
-const fill = new THREE.PointLight(0xff9ec4, 2.2, 4); fill.position.set(0, 0.9, 1.3); scene.add(fill);
+scene.add(new THREE.HemisphereLight(0xbcd4ff, 0x2a1e26, 1.25));
+const keyL = new THREE.DirectionalLight(0xffe4cf, 2.6); keyL.position.set(1.8, 3.2, 2.4); scene.add(keyL);
+const rimL = new THREE.DirectionalLight(0x8fb8ff, 1.9); rimL.position.set(-2.2, 1.6, -2.0); scene.add(rimL);
+const fillL = new THREE.PointLight(0xff9ec4, 2.0, 4.5); fillL.position.set(0, 0.9, 1.3); scene.add(fillL);
 
-const floor = new THREE.Mesh(
-  new THREE.CircleGeometry(9, 48).rotateX(-Math.PI/2),
-  new THREE.MeshStandardMaterial({ color:0x1a1e26, roughness:0.9, metalness:0.05 })
-);
-scene.add(floor);
+const floorGeo = new THREE.CircleGeometry(9, 48);
+floorGeo.rotateX(-Math.PI / 2);
+scene.add(new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({
+  color: 0x1a1e26, roughness: 0.9, metalness: 0.05
+})));
 
-/* ══════════════════════════════ 2. SHARED SHADER UNIFORMS ══════════════════════════════ */
+/* ═══════════════════════════ 2. SHADER UNIFORMS (shared) ═══════════════════════════ */
 
 const U = {
-  uTouch:  { value: new THREE.Vector3(0, -9, 0) },
-  uAmount: { value: 0 },
-  uRadius: { value: 0.14 },
-  uO0: { value: new THREE.Vector3(0, -9, 0) },
-  uO1: { value: new THREE.Vector3(0, -9, 0) },
-  uOpen0: { value: 0 }, uOpen1: { value: 0 },
-  uAx0: { value: new THREE.Vector3(0,0,1) },
-  uAx1: { value: new THREE.Vector3(0,0,1) },
+  uTouch:   { value: new THREE.Vector3(0, -9, 0) },
+  uAmount:  { value: 0 },
+  uRadius:  { value: 0.14 },
+  uOrifice0:{ value: new THREE.Vector3(0, -9, 0) },
+  uAxis0:   { value: new THREE.Vector3(0, 0, 1) },
+  uOpen0:   { value: 0 },
+  uOrifice1:{ value: new THREE.Vector3(0, -9, 0) },
+  uAxis1:   { value: new THREE.Vector3(0, 0, 1) },
+  uOpen1:   { value: 0 }
 };
 
 function patchBody(mat) {
@@ -125,85 +145,499 @@ function patchBody(mat) {
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `
         #include <common>
-        uniform vec3 uTouch; uniform float uAmount; uniform float uRadius;
-        uniform vec3 uO0; uniform vec3 uO1;
-        uniform float uOpen0; uniform float uOpen1;
-        uniform vec3 uAx0; uniform vec3 uAx1;
-
-        vec3 orificeStretch(vec3 p, vec3 c, vec3 ax, float open) {
-          if (open <= 0.0001) return p;
-          vec3 rel  = p - c;
-          float al  = dot(rel, ax);
-          vec3  rad = rel - ax * al;
-          float r   = length(rad) + 1e-5;
-          float ring = smoothstep(0.072, 0.0, r);
-          p += (rad / r) * ring * open * 0.052;
-          p -= ax * ring * open * 0.042;
-          return p;
-        }
+        uniform vec3  uTouch;
+        uniform float uAmount;
+        uniform float uRadius;
+        uniform vec3  uOrifice0;
+        uniform vec3  uAxis0;
+        uniform float uOpen0;
+        uniform vec3  uOrifice1;
+        uniform vec3  uAxis1;
+        uniform float uOpen1;
       `)
       .replace('#include <skinning_vertex>', `
         #include <skinning_vertex>
         {
-          float d    = distance(transformed, uTouch);
-          float infl = uAmount * smoothstep(uRadius, 0.0, d);
-          transformed += normalize(transformed - uTouch + 1e-5) * infl * 0.05;
-          transformed = orificeStretch(transformed, uO0, uAx0, uOpen0);
-          transformed = orificeStretch(transformed, uO1, uAx1, uOpen1);
+          float dT = distance( transformed, uTouch );
+          float infl = uAmount * smoothstep( uRadius, 0.0, dT );
+          transformed += normalize( transformed - uTouch + 1e-5 ) * infl * 0.05;
+
+          vec3  rA = transformed - uOrifice0;
+          float aA = dot( rA, uAxis0 );
+          vec3  pA = rA - uAxis0 * aA;
+          float lA = length( pA ) + 1e-5;
+          float kA = smoothstep( 0.072, 0.0, lA ) * uOpen0;
+          transformed += ( pA / lA ) * kA * 0.052;
+          transformed -= uAxis0 * kA * 0.042;
+
+          vec3  rB = transformed - uOrifice1;
+          float aB = dot( rB, uAxis1 );
+          vec3  pB = rB - uAxis1 * aB;
+          float lB = length( pB ) + 1e-5;
+          float kB = smoothstep( 0.072, 0.0, lB ) * uOpen1;
+          transformed += ( pB / lB ) * kB * 0.052;
+          transformed -= uAxis1 * kB * 0.042;
         }
       `);
   };
-  mat.customProgramCacheKey = () => 'bodyV1';
+  mat.customProgramCacheKey = () => 'bodyShaderV2';
 }
 
-const skinMat  = new THREE.MeshStandardMaterial({ color:0xf0c4a8, roughness:0.63, metalness:0.0, side:THREE.DoubleSide });
-const clothMat = new THREE.MeshStandardMaterial({ color:0xe8eef6, roughness:0.82, side:THREE.DoubleSide });
-const hairMat  = new THREE.MeshStandardMaterial({ color:0x2b2029, roughness:0.5, side:THREE.DoubleSide });
-patchBody(skinMat); patchBody(clothMat);
+const skinMat  = new THREE.MeshStandardMaterial({ color: 0xf0c4a8, roughness: 0.63, side: THREE.DoubleSide });
+const clothMat = new THREE.MeshStandardMaterial({ color: 0xe8eef6, roughness: 0.85, side: THREE.DoubleSide });
+const hairMat  = new THREE.MeshStandardMaterial({ color: 0x2b2029, roughness: 0.50, side: THREE.DoubleSide });
+patchBody(skinMat);
+patchBody(clothMat);
 
-/* ══════════════════════════════ 3. CHARACTER (procedural, all geometry baked to root space) ══════════════════════════════ */
+/* ═══════════════════════════ 3. CHARACTER ═══════════════════════════
+   All geometry is baked into root-local space, so one shader uniform
+   drives every mesh at once. */
 
 const root = new THREE.Group();
 scene.add(root);
 
-const bodyGroup = new THREE.Group(); root.add(bodyGroup);
-const pickables = [];
+const bodyGroup  = new THREE.Group(); root.add(bodyGroup);
+const clothGroup = new THREE.Group(); root.add(clothGroup);
+const pickables  = [];
 
-function add(geo, mat = skinMat, group = bodyGroup) {
+function add(geo, mat, group) {
+  mat = mat || skinMat;
+  group = group || bodyGroup;
   const m = new THREE.Mesh(geo, mat);
   m.frustumCulled = false;
   group.add(m);
   if (group === bodyGroup) pickables.push(m);
   return m;
 }
-function ball(r, p, s = [1,1,1], seg = [26, 18]) {
+function ball(r, p, s, seg) {
+  s = s || [1, 1, 1];
+  seg = seg || [26, 18];
   const g = new THREE.SphereGeometry(r, seg[0], seg[1]);
-  g.scale(s[0], s[1], s[2]); g.translate(p[0], p[1], p[2]);
+  g.scale(s[0], s[1], s[2]);
+  g.translate(p[0], p[1], p[2]);
   return g;
 }
-function limb(r, a, b, seg = 16) {
-  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
+function limb(r, a, b, seg) {
+  seg = seg || 16;
+  const A = new THREE.Vector3(a[0], a[1], a[2]);
+  const B = new THREE.Vector3(b[0], b[1], b[2]);
   const len = A.distanceTo(B);
-  const g = new THREE.CapsuleGeometry(r, Math.max(len - r*2, 0.001), 5, seg);
+  const g = new THREE.CapsuleGeometry(r, Math.max(len - r * 2, 0.001), 5, seg);
   const q = new THREE.Quaternion().setFromUnitVectors(
-    new THREE.Vector3(0,1,0), B.clone().sub(A).normalize()
+    new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize()
   );
   g.applyMatrix4(new THREE.Matrix4().compose(
-    A.clone().add(B).multiplyScalar(0.5), q, new THREE.Vector3(1,1,1)
+    A.clone().add(B).multiplyScalar(0.5), q, new THREE.Vector3(1, 1, 1)
   ));
   return g;
 }
 
-// torso / head — high tessellation on the pelvis so the orifice shader has geometry to work with
-add(ball(0.132, [0, 0.945, 0.0],  [1.00, 0.86, 0.96], [40, 28]));   // pelvis
-add(ball(0.108, [0, 1.065, 0.005],[1.00, 0.92, 0.80]));             // waist
-add(ball(0.126, [0, 1.235, 0.005],[1.00, 0.96, 0.78]));             // ribcage
-add(ball(0.073, [-0.076, 1.272, 0.088], [1,0.94,1.0], [26,20]));    // breast L
-add(ball(0.073, [ 0.076, 1.272, 0.088], [1,0.94,1.0], [26,20]));    // breast R
-add(ball(0.086, [-0.066, 0.888, -0.068], [1,0.94,0.96]));           // glute L
-add(ball(0.086, [ 0.066, 0.888, -0.068], [1,0.94,0.96]));           // glute R
-add(ball(0.056, [-0.146, 1.372, 0]));                               // shoulder L
-add(ball(0.056, [ 0.146, 1.372, 0]));                               // shoulder R
-add(limb(0.039, [0, 1.395, 0], [0, 1.505, 0.008]));                 // neck
-add(ball(0.106, [0, 1.585, 0.006], [0.95, 1.08, 1.0], [30,22]));    // head
-add(ball(0.118, [0, 1.60, -0.030], [1.02, 1.04, 1.02], [28,20
+/* torso, head, hair */
+add(ball(0.132, [0, 0.945, 0.000], [1.00, 0.86, 0.96], [40, 28]));
+add(ball(0.108, [0, 1.065, 0.005], [1.00, 0.92, 0.80]));
+add(ball(0.126, [0, 1.235, 0.005], [1.00, 0.96, 0.78]));
+add(ball(0.073, [-0.076, 1.272, 0.088], [1, 0.94, 1.0], [26, 20]));
+add(ball(0.073, [ 0.076, 1.272, 0.088], [1, 0.94, 1.0], [26, 20]));
+add(ball(0.086, [-0.066, 0.888, -0.068], [1, 0.94, 0.96]));
+add(ball(0.086, [ 0.066, 0.888, -0.068], [1, 0.94, 0.96]));
+add(ball(0.056, [-0.146, 1.372, 0]));
+add(ball(0.056, [ 0.146, 1.372, 0]));
+add(limb(0.039, [0, 1.395, 0], [0, 1.505, 0.008]));
+add(ball(0.106, [0, 1.585, 0.006], [0.95, 1.08, 1.0], [30, 22]));
+add(ball(0.118, [0, 1.600, -0.030], [1.02, 1.04, 1.02], [28, 20]), hairMat);
+add(limb(0.062, [0, 1.500, -0.085], [0, 1.140, -0.140], 14), hairMat);
+
+/* arms */
+for (const s of [-1, 1]) {
+  add(limb(0.042, [s * 0.155, 1.362, 0], [s * 0.205, 1.105, 0.02]));
+  add(limb(0.035, [s * 0.205, 1.105, 0.02], [s * 0.220, 0.875, 0.05]));
+  add(ball(0.043, [s * 0.223, 0.838, 0.058], [0.65, 1, 1.25]));
+}
+/* legs */
+for (const s of [-1, 1]) {
+  add(limb(0.073, [s * 0.069, 0.905, 0], [s * 0.076, 0.505, 0.012]));
+  add(limb(0.055, [s * 0.076, 0.505, 0.012], [s * 0.079, 0.095, 0.006]));
+  add(ball(0.050, [s * 0.079, 0.046, 0.052], [0.9, 0.5, 1.7]));
+}
+/* clothing shells */
+add(ball(0.140, [0, 1.238, 0.004], [1.02, 0.96, 0.83]), clothMat, clothGroup);
+add(ball(0.140, [0, 0.945, 0.000], [1.03, 0.72, 1.00]), clothMat, clothGroup);
+
+/* ═══════════════════════════ 4. EVENT BUS + ORIFICES ═══════════════════════════ */
+
+const bus = {
+  m: {},
+  on(k, f) { (this.m[k] = this.m[k] || []).push(f); },
+  emit(k, v) { (this.m[k] || []).forEach(f => f(v)); }
+};
+
+class Orifice {
+  constructor(surface, axis, radius, maxDepth, label) {
+    this.surface  = new THREE.Vector3(surface[0], surface[1], surface[2]);
+    this.axis     = new THREE.Vector3(axis[0], axis[1], axis[2]).normalize();
+    this.radius   = radius;
+    this.maxDepth = maxDepth;
+    this.label    = label;
+    this.depth = 0; this.lateral = 0; this.engaged = false; this.speed = 0; this.open = 0;
+  }
+  solve(tipLocal, dt) {
+    const rel   = tipLocal.clone().sub(this.surface);
+    const along = rel.dot(this.axis);
+    const prev  = this.depth;
+
+    this.depth   = Math.min(Math.max(along, 0), this.maxDepth);
+    this.lateral = rel.addScaledVector(this.axis, -along).length();
+    this.speed   = (this.depth - prev) / Math.max(dt, 1e-4);
+
+    const inside = this.depth > 0.0015 && this.lateral < this.radius * 1.9;
+    if (inside !== this.engaged) bus.emit(inside ? 'insert' : 'withdraw', this);
+    this.engaged = inside;
+
+    const want = inside ? Math.min(1, this.depth / (this.maxDepth * 0.35)) : 0;
+    this.open += (want - this.open) * Math.min(1, dt * 9);
+  }
+}
+
+const ORIFICES = [
+  new Orifice([0, 0.925,  0.086], [0, 0.00, 1], 0.027, 0.135, 'vagina'),
+  new Orifice([0, 0.902, -0.098], [0, 0.06, 1], 0.020, 0.125, 'anus')
+];
+let activeOrifice = 0;
+
+/* ═══════════════════════════ 5. PENETRATOR ═══════════════════════════ */
+
+const penMat = new THREE.MeshStandardMaterial({
+  color: 0xe58aa8, roughness: 0.22, emissive: 0x40101f, emissiveIntensity: 0.35
+});
+const penGeo = new THREE.CapsuleGeometry(0.019, 0.118, 6, 18);
+penGeo.rotateX(Math.PI / 2);
+penGeo.translate(0, 0, -(0.118 / 2 + 0.019));
+const penetrator = new THREE.Mesh(penGeo, penMat);
+penetrator.frustumCulled = false;
+root.add(penetrator);
+
+/* ═══════════════════════════ 6. SECTION CUT + STENCIL CAP ═══════════════════════════ */
+
+const cut = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
+const cutLocal = cut.clone();
+
+const writerMat = new THREE.MeshBasicMaterial({
+  side: THREE.BackSide,
+  clippingPlanes: [cut],
+  colorWrite: false,
+  depthWrite: false,
+  stencilWrite: true,
+  stencilFunc: THREE.AlwaysStencilFunc,
+  stencilFail: THREE.IncrementWrapStencilOp,
+  stencilZFail: THREE.IncrementWrapStencilOp,
+  stencilZPass: THREE.IncrementWrapStencilOp
+});
+const capGroup = new THREE.Group(); root.add(capGroup);
+bodyGroup.children.forEach(m => capGroup.add(new THREE.Mesh(m.geometry, writerMat)));
+
+const capMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(2.8, 2.8),
+  new THREE.MeshBasicMaterial({
+    color: 0xc46f85, side: THREE.DoubleSide,
+    transparent: true, opacity: 0.6, depthWrite: false,
+    stencilWrite: true, stencilRef: 0, stencilFunc: THREE.NotEqualStencilFunc,
+    stencilFail: THREE.ReplaceStencilOp,
+    stencilZFail: THREE.ReplaceStencilOp,
+    stencilZPass: THREE.ReplaceStencilOp
+  })
+);
+capMesh.renderOrder = 20;
+capMesh.visible = false;
+scene.add(capMesh);
+
+[...bodyGroup.children, ...clothGroup.children, penetrator].forEach(m => {
+  m.material.clippingPlanes = [cut];
+});
+
+/* ═══════════════════════════ 7. HAND ═══════════════════════════ */
+
+const handMat = new THREE.MeshStandardMaterial({
+  color: 0x9fe0ff, transparent: true, opacity: 0.42,
+  emissive: 0x2f86c0, emissiveIntensity: 0.9,
+  roughness: 0.2, metalness: 0.15, side: THREE.DoubleSide
+});
+const hand = new THREE.Group();
+hand.position.set(0, 1.28, 0.34);
+scene.add(hand);
+{
+  const palm = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), handMat);
+  palm.scale.set(0.042, 0.013, 0.048);
+  hand.add(palm);
+
+  for (let i = 0; i < 4; i++) {
+    const len = 0.055 - Math.abs(i - 1.2) * 0.006;
+    const f = new THREE.Mesh(new THREE.CapsuleGeometry(0.0075, len, 4, 10), handMat);
+    f.rotation.x = Math.PI / 2;
+    f.position.set(-0.031 + i * 0.021, 0, 0.048 + len / 2);
+    hand.add(f);
+  }
+  const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(0.0095, 0.042, 4, 10), handMat);
+  thumb.rotation.set(Math.PI / 2, 0, -1.05);
+  thumb.position.set(-0.048, 0.002, 0.026);
+  hand.add(thumb);
+}
+
+/* ═══════════════════════════ 8. TOUCH ZONES ═══════════════════════════ */
+
+const ZONES = [
+  { n: 'head',     p: [ 0.000, 1.590,  0.020], r: 0.130, a: 3 },
+  { n: 'cheek',    p: [ 0.072, 1.560,  0.070], r: 0.055, a: 4 },
+  { n: 'neck',     p: [ 0.000, 1.452,  0.035], r: 0.065, a: 5 },
+  { n: 'chest',    p: [ 0.000, 1.320,  0.055], r: 0.085, a: 5 },
+  { n: 'breast L', p: [-0.076, 1.272,  0.098], r: 0.082, a: 9 },
+  { n: 'breast R', p: [ 0.076, 1.272,  0.098], r: 0.082, a: 9 },
+  { n: 'belly',    p: [ 0.000, 1.080,  0.062], r: 0.085, a: 6 },
+  { n: 'hip',      p: [ 0.104, 0.948,  0.040], r: 0.075, a: 7 },
+  { n: 'thigh L',  p: [-0.076, 0.700,  0.052], r: 0.072, a: 8 },
+  { n: 'thigh R',  p: [ 0.076, 0.700,  0.052], r: 0.072, a: 8 },
+  { n: 'glute L',  p: [-0.066, 0.888, -0.120], r: 0.072, a: 10 },
+  { n: 'glute R',  p: [ 0.066, 0.888, -0.120], r: 0.072, a: 10 }
+].map(z => ({
+  n: z.n, r: z.r, a: z.a, inside: false,
+  v: new THREE.Vector3(z.p[0], z.p[1], z.p[2])
+}));
+
+/* ═══════════════════════════ 9. AUDIO ═══════════════════════════ */
+
+let actx = null;
+function blip(freq, dur, vol) {
+  if (!actx) return;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = 'sine';
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
+  o.connect(g);
+  g.connect(actx.destination);
+  o.start();
+  o.stop(actx.currentTime + dur);
+}
+addEventListener('pointerdown', () => {
+  if (!actx) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (Ctx) actx = new Ctx();
+  }
+}, { once: true });
+
+/* ═══════════════════════════ 10. STATE + UI ═══════════════════════════ */
+
+const $ = id => document.getElementById(id);
+
+const state = {
+  arousal: 0, auto: false, section: true, clothes: true, pose: 0,
+  thrust: { target: 0.35, pos: 0.35, vel: 0 },
+  press: 0, pressTarget: 0, lastZone: '—'
+};
+
+const POSES = [
+  { name: 'standing', pos: [0, 0, 0], rot: [0, 0, 0],
+    cam: [0.32, 1.02, 2.15], look: [0, 0.95, 0],
+    scm: [1.15, 0.98, 0.30], slook: [0, 0.95, 0.02] },
+  { name: 'on back', pos: [0, 0.28, 0.72], rot: [-Math.PI / 2, 0, 0],
+    cam: [0.55, 0.80, 0.90], look: [0, 0.30, -0.15],
+    scm: [1.10, 0.44, -0.12], slook: [0, 0.28, -0.12] }
+];
+
+const pointer = new THREE.Vector2(0, 0);
+const ray = new THREE.Raycaster();
+const handTarget = new THREE.Vector3(0, 1.28, 0.34);
+const handNormal = new THREE.Vector3(0, 0, 1);
+const depthPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), -0.12);
+const tmp = new THREE.Vector3();
+const tmp2 = new THREE.Vector3();
+const tmpN = new THREE.Matrix3();
+
+function setAuto(v)    { state.auto = v;    $('bAuto').classList.toggle('on', v); }
+function setSection(v) { state.section = v; $('bSect').classList.toggle('on', v); }
+function setClothes(v) { state.clothes = v; clothGroup.visible = v; $('bCloth').firstChild.nodeValue = 'Clothes: ' + (v ? 'on' : 'off') + ' '; }
+function setOrifice(i) { activeOrifice = i; $('bOrif').firstChild.nodeValue = 'Orifice: ' + ORIFICES[i].label + ' '; }
+function setPose(i)    { state.pose = ((i % POSES.length) + POSES.length) % POSES.length; $('bPose').firstChild.nodeValue = 'Pose: ' + POSES[state.pose].name + ' '; }
+
+$('bAuto').onclick  = () => setAuto(!state.auto);
+$('bSect').onclick  = () => setSection(!state.section);
+$('bOrif').onclick  = () => setOrifice((activeOrifice + 1) % ORIFICES.length);
+$('bCloth').onclick = () => setClothes(!state.clothes);
+$('bPose').onclick  = () => setPose(state.pose + 1);
+
+addEventListener('pointermove', e => {
+  pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+});
+addEventListener('pointerdown', () => { state.pressTarget = 1; });
+addEventListener('pointerup',   () => { state.pressTarget = 0; });
+addEventListener('pointercancel', () => { state.pressTarget = 0; });
+addEventListener('wheel', e => {
+  state.thrust.target = Math.min(1, Math.max(0, state.thrust.target - e.deltaY * 0.0009));
+}, { passive: true });
+
+addEventListener('keydown', e => {
+  if (e.code === 'Space') { setAuto(!state.auto); e.preventDefault(); }
+  if (e.key === 'c') setSection(!state.section);
+  if (e.key === 'o') setOrifice((activeOrifice + 1) % ORIFICES.length);
+  if (e.key === 'v') setClothes(!state.clothes);
+  if (e.key === 'p') setPose(state.pose + 1);
+  if (e.key === 'w') state.thrust.target = Math.min(1, state.thrust.target + 0.06);
+  if (e.key === 's') state.thrust.target = Math.max(0, state.thrust.target - 0.06);
+});
+
+bus.on('insert',   o => { state.arousal = Math.min(100, state.arousal + 7); blip(150, 0.18, 0.05); });
+bus.on('withdraw', ()  => blip(110, 0.10, 0.03));
+
+/* ═══════════════════════════ 11. UPDATE ═══════════════════════════ */
+
+const clock = new THREE.Clock();
+const q = new THREE.Quaternion();
+const basisM = new THREE.Matrix4();
+const tipLocal = new THREE.Vector3();
+const rootInv = new THREE.Matrix4();
+
+function update(dt) {
+  const P = POSES[state.pose];
+  root.position.lerp(tmp.set(P.pos[0], P.pos[1], P.pos[2]), Math.min(1, dt * 5));
+  root.rotation.x += (P.rot[0] - root.rotation.x) * Math.min(1, dt * 5);
+  root.updateMatrixWorld(true);
+
+  /* hand target */
+  ray.setFromCamera(pointer, camera);
+  const hits = ray.intersectObjects(pickables, false);
+  if (hits.length) {
+    const h = hits[0];
+    handTarget.copy(h.point);
+    tmpN.getNormalMatrix(h.object.matrixWorld);
+    handNormal.copy(h.face.normal).applyMatrix3(tmpN).normalize();
+    if (handNormal.dot(ray.ray.direction) > 0) handNormal.negate();
+  } else if (ray.ray.intersectPlane(depthPlane, tmp2)) {
+    handTarget.copy(tmp2);
+    handNormal.set(0, 0, 1);
+  }
+
+  /* press + hand follow */
+  state.press += (state.pressTarget - state.press) * Math.min(1, dt * 12);
+  tmp2.copy(handTarget).addScaledVector(handNormal, -0.030 * state.press);
+  hand.position.lerp(tmp2, Math.min(1, dt * 16));
+
+  /* palm-to-surface orientation */
+  const n = handNormal.clone().normalize();
+  const t = new THREE.Vector3(0, 1, 0).sub(n.clone().multiplyScalar(n.y));
+  if (t.lengthSq() < 0.02) t.set(0, 0, 1);
+  t.normalize();
+  const bx = new THREE.Vector3().crossVectors(n, t).normalize();
+  basisM.makeBasis(bx, n, t);
+  hand.quaternion.slerp(q.setFromRotationMatrix(basisM), Math.min(1, dt * 10));
+
+  /* push uniform, root-local */
+  rootInv.copy(root.matrixWorld).invert();
+  const local = hand.position.clone().applyMatrix4(rootInv);
+  U.uTouch.value.copy(local);
+  U.uAmount.value = state.press * 0.85;
+
+  /* zones */
+  for (const z of ZONES) {
+    const near = local.distanceTo(z.v) < z.r + 0.045;
+    if (near && !z.inside) {
+      state.lastZone = z.n;
+      state.arousal = Math.min(100, state.arousal + z.a * 0.55);
+      blip(210 + z.a * 22, 0.12, 0.045);
+    }
+    z.inside = near;
+  }
+
+  /* thrust spring */
+  if (state.auto) state.thrust.target = 0.5 + Math.sin(performance.now() * 0.0042) * 0.48;
+  const th = state.thrust;
+  th.vel += (th.target - th.pos) * 0.19;
+  th.vel *= 0.74;
+  th.pos = Math.min(1, Math.max(0, th.pos + th.vel));
+
+  /* orifice solve */
+  const orc = ORIFICES[activeOrifice];
+  tipLocal.copy(orc.surface).addScaledVector(orc.axis, th.pos * orc.maxDepth);
+  orc.solve(tipLocal, dt);
+
+  penetrator.position.copy(tipLocal);
+  penetrator.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), orc.axis);
+
+  const other = ORIFICES[(activeOrifice + 1) % 2];
+  U.uOrifice0.value.copy(orc.surface);   U.uAxis0.value.copy(orc.axis);   U.uOpen0.value = orc.open;
+  U.uOrifice1.value.copy(other.surface); U.uAxis1.value.copy(other.axis); U.uOpen1.value = other.open;
+
+  state.arousal = Math.min(100, state.arousal + Math.abs(orc.speed) * dt * 3.2);
+  state.arousal *= (1 - dt * 0.055);
+
+  /* cameras + cut plane */
+  camera.position.lerp(tmp.set(P.cam[0], P.cam[1], P.cam[2]), Math.min(1, dt * 4));
+  camera.lookAt(P.look[0], P.look[1], P.look[2]);
+  sectionCamera.position.lerp(tmp.set(P.scm[0], P.scm[1], P.scm[2]), Math.min(1, dt * 4));
+  sectionCamera.lookAt(P.slook[0], P.slook[1], P.slook[2]);
+
+  cut.copy(cutLocal).applyMatrix4(root.matrixWorld);
+  capMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), cut.normal);
+  capMesh.position.setFromMatrixPosition(root.matrixWorld);
+
+  /* HUD */
+  $('zone').textContent = state.lastZone;
+  const a = Math.round(state.arousal);
+  $('aTxt').textContent = a + '%';
+  $('ab').firstChild.style.width = a + '%';
+  const dp = Math.round(th.pos * 100);
+  $('dTxt').textContent = dp + '%';
+  $('db').firstChild.style.width = dp + '%';
+}
+
+/* ═══════════════════════════ 12. RENDER ═══════════════════════════ */
+
+function render() {
+  /* main pass — park the clip plane far away so it cuts nothing */
+  cut.constant += 1000;
+  capMesh.visible = false;
+  renderer.setScissorTest(false);
+  renderer.setViewport(0, 0, innerWidth, innerHeight);
+  renderer.render(scene, camera);
+  cut.constant -= 1000;
+
+  if (!state.section) return;
+
+  /* inset cross-section pass */
+  const w = innerWidth * 0.34, h = innerHeight * 0.34, pad = 16;
+  capMesh.visible = true;
+  sectionCamera.aspect = w / h;
+  sectionCamera.updateProjectionMatrix();
+
+  renderer.setScissorTest(true);
+  renderer.setViewport(innerWidth - w - pad, pad, w, h);
+  renderer.setScissor(innerWidth - w - pad, pad, w, h);
+  renderer.render(scene, sectionCamera);
+  renderer.setScissorTest(false);
+}
+
+/* ═══════════════════════════ 13. BOOT ═══════════════════════════ */
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+setOrifice(0);
+setClothes(true);
+setPose(0);
+setSection(true);
+setAuto(false);
+
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  try {
+    update(dt);
+    render();
+  } catch (e) {
+    fail(e);
+    renderer.setAnimationLoop(null);
+  }
+});
+</script>
+</body>
+</html>
